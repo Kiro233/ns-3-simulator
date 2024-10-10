@@ -4,7 +4,7 @@ NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/ad
 
 
 /*
-NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2 > scratch/log.adjustGear_new.server.out --command-template="%s  --gNbNum=3 --ueNum=12 --adjustInteval=0.001 --adjustDelay=0.05 --randomStream=1 --windows_size=1" 2>&1
+NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2_fair > scratch/log.adjustGear_new.server.out --command-template="%s  --gNbNum=3 --ueNum=20 --adjustInteval=0.001 --adjustDelay=0.05 --randomStream=1 --windows_size=1" 2>&1
 */
 // 9-9
 
@@ -90,10 +90,10 @@ int relatSchedule(int ueID, double bandWidth) {
             break;
         }
     }
-    //档位 0-GearNum /不能e完成 -1
-    if (newGear == -1) {
-        newGear = 8;
-    }
+    // //档位 0-GearNum /不能e完成 -1
+    // if (newGear == -1) {
+    //     newGear = 8;
+    // }
     NS_LOG_UNCOND("  return gear: " << newGear << "\n");  
     return newGear;
 };
@@ -173,16 +173,34 @@ void adjustGear(AdjustGearParams& params
 
                 // NS_LOG_UNCOND("  Throught now is " << FlowThroughput << "Mbps");
                 int newGear = relatSchedule(ueNum, FlowThroughput);
-                if ( newGear != -1) {
+                
+                //档位 0-GearNum /不能e完成 -1
+                if (newGear == -1) {
+                    NS_LOG_UNCOND("  ue " << ueNum << " gear -1");
+                    newGear = 8;
+
+                    int l_gear = 5; 
+                    int flag = 0;
+                    while (flag == 0 && l_gear <= 8) {
+                        NS_LOG_UNCOND("  l_gear now is " << l_gear );
+                        for (int ue = 0; ue < params.ueAmount; ue++) {
+                            if (ue != ueNum) {
+                                if (ueGearList[ue] < l_gear) {
+                                    params.clientApps[ue]->lock();
+                                    NS_LOG_UNCOND("  ue " << ue << "change gear to " << l_gear );
+                                    Simulator::Schedule(params.adjustDelay, &changeGear, ue, params.clientApps, l_gear);
+                                    flag = 1;
+                                }
+                            }
+                        }
+                        l_gear++;
+                    }
+                }
                     
-                    // NS_LOG_UNCOND("  time " << Simulator::Now().GetSeconds() << " ue " << ueNum << " will change Packet Size to " << new_size << " at " << Simulator::Now().GetMilliSeconds() + adjustDelay.GetMilliSeconds() << "ms");
-                    params.clientApps[ueNum]->lock();
-                    Simulator::Schedule(params.adjustDelay, &changeGear, ueNum, params.clientApps, newGear);
-                }
-                else {
-                    // NS_LOG_UNCOND("System Overload");
-                    // Simulator::Stop();
-                }
+                // NS_LOG_UNCOND("  time " << Simulator::Now().GetSeconds() << " ue " << ueNum << " will change Packet Size to " << new_size << " at " << Simulator::Now().GetMilliSeconds() + adjustDelay.GetMilliSeconds() << "ms");
+                params.clientApps[ueNum]->lock();
+                Simulator::Schedule(params.adjustDelay, &changeGear, ueNum, params.clientApps, newGear);
+
             }
         
         }
@@ -211,7 +229,7 @@ int main(int argc, char* argv[]) {
     bool doubleOperationalBand = false;  // 是否使用双操作频段
 
     // Time simTime = MilliSeconds(1000);  // 模拟时间
-    Time simTime = Seconds(5);  // 模拟时间设置
+    Time simTime = Seconds(10);  // 模拟时间设置
     Time udpAppStartTime = MilliSeconds(500);  // UDP应用启动时间
 
 
@@ -255,7 +273,7 @@ int main(int argc, char* argv[]) {
     
     ueGearList = new int[ueNum + 1];
     for (int i = 0; i < ueNum ; i++) {
-        ueGearList[i] = 8;
+        ueGearList[i] = 0;
     }
 
     NS_LOG_UNCOND("  " << "gNbNum :" << gNbNum << "\n");
@@ -464,7 +482,7 @@ int main(int argc, char* argv[]) {
         windows_size
     };
 
-    // Simulator::Schedule(MilliSeconds(400) + adjustInteval, &adjustGear, params);
+    Simulator::Schedule(MilliSeconds(400) + adjustInteval, &adjustGear, params);
 
 
 
