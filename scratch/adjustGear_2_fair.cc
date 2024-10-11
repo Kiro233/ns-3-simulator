@@ -4,7 +4,7 @@ NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/ad
 
 
 /*
-NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2_fair > scratch/log.adjustGear_new.server.out --command-template="%s  --gNbNum=3 --ueNum=20 --adjustInteval=0.001 --adjustDelay=0.05 --randomStream=1 --windows_size=1" 2>&1
+NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2_fair > scratch/log.adjustGear_new14.server.out --command-template="%s  --gNbNum=3 --ueNum=14 --adjustInteval=0.001 --adjustDelay=0.1 --randomStream=1 --windows_size=1" 2>&1
 */
 // 9-9
 
@@ -220,6 +220,7 @@ int main(int argc, char* argv[]) {
     int64_t randomStream = 1;  // 随机数流的初始值
     uint16_t gNbNum = 1;          // gNb的数量
     uint16_t ueNum = 3;         // 用户设备数量
+    uint16_t gridueNum = 25;
     Time adjustInteval = MilliSeconds(10); //调档间隔
     Time adjustDelay = MilliSeconds(50);  //调档时延
 
@@ -293,13 +294,13 @@ int main(int argc, char* argv[]) {
     gridScenario.SetUtHeight(1.5);  // 设置用户设备高度
     gridScenario.SetSectorization(GridScenarioHelper::TRIPLE);  // 设置3扇区化
     gridScenario.SetBsNumber(gNbNum);  // 设置基站数量
-    gridScenario.SetUtNumber(ueNum);  // 设置用户设备总数
+    gridScenario.SetUtNumber(gridueNum);  // 设置用户设备总数
     gridScenario.SetScenarioHeight(150);  // 设置场景高度
     gridScenario.SetScenarioLength(150);  // 设置场景长度
     randomStream += gridScenario.AssignStreams(randomStream);  // 分配随机数流
     gridScenario.CreateScenario();  // 创建场景
 
-    NS_LOG_UNCOND("  " << Simulator::Now().GetSeconds() << "  Scenario create successe " << "\n");
+    NS_LOG_UNCOND("  " << Simulator::Now().GetSeconds() << "  Scenario create success " << "\n");
 
     NodeContainer ueLowLatContainer;  // 创建低延迟用户设备容器
 
@@ -406,7 +407,13 @@ int main(int argc, char* argv[]) {
         ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
     }
 
-    nrHelper->AttachToClosestEnb(ueLowLatNetDev, enbNetDev);  // 将用户设备连接到最近的基站
+
+    NS_LOG_UNCOND("  gnb num is " << enbNetDev.GetN());
+    for (uint32_t j = 0; j < gridScenario.GetUserTerminals().GetN(); ++j) {  
+        nrHelper->AttachToEnb(ueLowLatNetDev.Get(j), enbNetDev.Get(j%3));
+        NS_LOG_UNCOND("  ue " << j << " attach to gnb" << j%3);
+    }
+    // nrHelper->AttachToClosestEnb(ueLowLatNetDev, enbNetDev);  // 将用户设备连接到最近的基站
 
     NS_LOG_UNCOND("  p2p an IP set success " << Simulator::Now().GetSeconds() << "\n");
 
@@ -432,7 +439,7 @@ int main(int argc, char* argv[]) {
     std::vector<ns3::Ptr<ns3::UdpClient>> clientApps(ueNum);  // 创建客户端应用容器
     ApplicationContainer clientAppsContainer[ueNum];  // 创建客户端应用容器
 
-    for (uint32_t j = 0; j < gridScenario.GetUserTerminals().GetN(); ++j)
+    for (uint32_t j = 0; j < ueNum; ++j)
     {
         dlClientLowLat[j].SetAttribute("RemotePort", UintegerValue(dlPortLowLat));  // 设置远程端口
         dlClientLowLat[j].SetAttribute("MaxPackets", UintegerValue(0xFFFFFFFF));  // 设置最大包数
@@ -482,7 +489,7 @@ int main(int argc, char* argv[]) {
         windows_size
     };
 
-    Simulator::Schedule(MilliSeconds(400) + adjustInteval, &adjustGear, params);
+    // Simulator::Schedule(MilliSeconds(400) + adjustInteval, &adjustGear, params);
 
 
 

@@ -4,7 +4,7 @@ NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/ad
 
 
 /*
-NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2 > scratch/log.adjustGear_new.server.out --command-template="%s  --gNbNum=3 --ueNum=12 --adjustInteval=0.001 --adjustDelay=0.05 --randomStream=1 --windows_size=1" 2>&1
+NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2 > scratch/log.adjustGear_new.server.out --command-template="%s  --gNbNum=3 --ueNum=10 --adjustInteval=0.001 --adjustDelay=0.05 --randomStream=17 --windows_size=1" 2>&1
 */
 // 9-9
 
@@ -202,6 +202,7 @@ int main(int argc, char* argv[]) {
     int64_t randomStream = 1;  // 随机数流的初始值
     uint16_t gNbNum = 1;          // gNb的数量
     uint16_t ueNum = 3;         // 用户设备数量
+
     Time adjustInteval = MilliSeconds(10); //调档间隔
     Time adjustDelay = MilliSeconds(50);  //调档时延
 
