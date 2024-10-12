@@ -1,0 +1,19 @@
+[0/2] Re-checking globbed directories...
+[1/2] Building CXX object scratch/CMakeFiles/scratch_adjustGear_2_fair.dir/adjustGear_2_fair.cc.o
+[2/2] Linking CXX executable ../build/scratch/ns3.41-adjustGear_2_fair-default
+  gNbNum :3
+
+  ueNum :14
+
+  adjustInteval :1ms
+
+  adjustDelay :100ms
+
+  0  Scenario create successe 
+
+Creating 25 user terminals
+  gnb set success 0
+
+  p2p an IP set success 0
+
+Process was interrupted by the user
