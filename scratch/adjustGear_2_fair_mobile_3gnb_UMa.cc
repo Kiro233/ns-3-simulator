@@ -4,7 +4,7 @@ NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/ad
 
 
 /*
-NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2_fair_mobility > scratch/log.adjustGear_mobility25.server.out --command-template="%s  --gNbNum=1 --ueNum=25 --adjustInteval=0.001 --adjustDelay=0.1 --randomStream=1 --windows_size=1" 2>&1
+NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2_fair_mobile_3gnb_UMa > scratch/log.adjustGear_mobile_3gnb10_2.server.out --command-template="%s  --gNbNum=3 --ueNumPergNb=25 --adjustInteval=0.001 --adjustDelay=0.1 --randomStream=1 --windows_size=1" 2>&1
 */
 // 9-9
 
@@ -17,7 +17,7 @@ NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/ad
 #include "ns3/flow-monitor-module.h"
 #include "ns3/internet-apps-module.h"
 #include "ns3/internet-module.h"
-// #include "ns3/mobility-module.h"
+#include "ns3/mobility-module.h"
 #include "ns3/network-module.h"
 #include "ns3/nr-module.h"
 #include "ns3/point-to-point-module.h"
@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
     int windows_size = 2;
     int64_t randomStream = 1;  // 随机数流的初始值
     uint16_t gNbNum = 1;          // gNb的数量
-    uint16_t ueNum = 3;         // 用户设备数量
+    uint16_t ueNumPergNb = 3;         // 用户设备数量
     Time adjustInteval = MilliSeconds(10); //调档间隔
     Time adjustDelay = MilliSeconds(50);  //调档时延
 
@@ -231,7 +231,7 @@ int main(int argc, char* argv[]) {
     bool doubleOperationalBand = false;  // 是否使用双操作频段
 
     // Time simTime = MilliSeconds(1000);  // 模拟时间
-    Time simTime = Seconds(40);  // 模拟时间设置
+    Time simTime = Seconds(15);  // 模拟时间设置
     Time udpAppStartTime = MilliSeconds(500);  // UDP应用启动时间
 
 
@@ -257,7 +257,7 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("outputDir", "Directory for simulation results", outputDir);
 
     cmd.AddValue("gNbNum", "gNbNum", gNbNum);
-    cmd.AddValue("ueNum", "ueNum", ueNum);
+    cmd.AddValue("ueNumPergNb", "ueNumPergNb", ueNumPergNb);
     cmd.AddValue("adjustInteval", "adjustInteval", adjustInteval);
     cmd.AddValue("adjustDelay", "adjustDelay", adjustDelay);
     cmd.AddValue("randomStream", "randomStream", randomStream);
@@ -274,58 +274,61 @@ int main(int argc, char* argv[]) {
 
     }
     
-    ueGearList = new int[ueNum + 1];
-    for (int i = 0; i < ueNum ; i++) {
+    ueGearList = new int[gNbNum*ueNumPergNb + 1];
+    for (int i = 0; i < gNbNum*ueNumPergNb ; i++) {
         ueGearList[i] = 0;
     }
 
     NS_LOG_UNCOND("  " << "gNbNum :" << gNbNum << "\n");
-    NS_LOG_UNCOND("  " << "ueNum :" << ueNum << "\n");
+    NS_LOG_UNCOND("  " << "ueNumPergNb :" << ueNumPergNb << "\n");
     NS_LOG_UNCOND("  " << "adjustInteval :" << adjustInteval.GetMilliSeconds() << "ms\n");
     NS_LOG_UNCOND("  " << "adjustDelay :" << adjustDelay.GetMilliSeconds() << "ms\n");
 
     Config::SetDefault("ns3::LteRlcUm::MaxTxBufferSize", UintegerValue(999999999));  // 设置最大传输缓冲区大小
 
-
-    // GridScenarioHelper gridScenario;  // 创建格网场景帮助器
-    // gridScenario.SetRows(1);  // 设置行数
-    // gridScenario.SetColumns(gNbNum);  // 设置列数
-    // gridScenario.SetHorizontalBsDistance(100.0);  // 设置基站水平距离
-    // gridScenario.SetVerticalBsDistance(10.0);  // 设置基站垂直距离
-    // gridScenario.SetBsHeight(20);  // 设置基站高度
-    // gridScenario.SetUtHeight(1.5);  // 设置用户设备高度
-    // gridScenario.SetSectorization(GridScenarioHelper::TRIPLE);  // 设置3扇区化
-    // gridScenario.SetBsNumber(gNbNum);  // 设置基站数量
-    // gridScenario.SetUtNumber(gridueNum);  // 设置用户设备总数
-    // gridScenario.SetScenarioHeight(150);  // 设置场景高度
-    // gridScenario.SetScenarioLength(150);  // 设置场景长度
-    // randomStream += gridScenario.AssignStreams(randomStream);  // 分配随机数流
-    // gridScenario.CreateScenario();  // 创建场景
-
     NodeContainer gNbNodes;
     NodeContainer ueNodes;
     MobilityHelper mobility;
+    // int nodeSpeed = 0.83; // in m/s
+
+    gNbNodes.Create(3);
+    ueNodes.Create(gNbNum*ueNumPergNb);
+
+    double gnbX = 200.0;
+
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-
-    const double gNbHeight = 25;
-    const double ueHeight = 1.5;
-
-    gNbNodes.Create(1);
-    ueNodes.Create(ueNum);
-
-    Ptr<ListPositionAllocator> bsPositionAlloc = CreateObject<ListPositionAllocator>();
-    bsPositionAlloc->Add(Vector(0.0, 0.0, gNbHeight));
-    mobility.SetPositionAllocator(bsPositionAlloc);
+    Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
+    gnbPositionAlloc->Add(Vector(gnbX, 0.0, 25));
+    gnbPositionAlloc->Add(Vector(gnbX+200, 0.0, 25));
+    gnbPositionAlloc->Add(Vector(gnbX-200, 0.0, 25));
+    
+    mobility.SetPositionAllocator(gnbPositionAlloc);
     mobility.Install(gNbNodes);
 
-    Ptr<ListPositionAllocator> ueDiscPositionAlloc = CreateObject<ListPositionAllocator>();
-    ueDiscPositionAlloc->Add(Vector(-2 * distanceToRx, distanceToRx, ueHeight));
-    mobility.SetPositionAllocator(ueDiscPositionAlloc);
+    mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
+                            "Bounds",
+                            RectangleValue(Rectangle(-500, 500, -500, 500)),
+                            "Speed",
+                            StringValue("ns3::ConstantRandomVariable[Constant=0.83]")
+                            );
 
-    for (uint32_t i = 0; i < ueNodes.GetN(); i++)
-    {
+    double min = -500.0;
+    double max = 500.0;
+    Ptr<UniformRandomVariable> randomPos = CreateObject<UniformRandomVariable> ();
+    randomPos->SetAttribute ("Min", DoubleValue (min));
+    randomPos->SetAttribute ("Max", DoubleValue (max));
+    for (int i = 0; i < gNbNum*ueNumPergNb; i++) {
+        Ptr<ListPositionAllocator> uePositionAlloc = CreateObject<ListPositionAllocator>();
+        double x = randomPos->GetValue();
+        double y = randomPos->GetValue();
+        uePositionAlloc->Add(Vector(x, y, 1.5));
+        NS_LOG_UNCOND(" x " << x << " y " << y << "\n");
+
+        mobility.SetPositionAllocator(uePositionAlloc);
         mobility.Install(ueNodes.Get(i));
+        randomStream += mobility.AssignStreams(ueNodes.Get(i), randomStream);
     }
+
 
     NS_LOG_UNCOND("  " << Simulator::Now().GetSeconds() << "  Scenario create success " << "\n");
 
@@ -347,7 +350,7 @@ int main(int argc, char* argv[]) {
     CcBwpCreator ccBwpCreator;  // 创建CC BWP创建者
     const uint8_t numCcPerBand = 1;  // 每个频段的CC数量
 
-    CcBwpCreator::SimpleOperationBandConf bandConf1(centralFrequencyBand1, bandwidthBand1, numCcPerBand, BandwidthPartInfo::UMi_StreetCanyon);  // 创建简单操作频带配置
+    CcBwpCreator::SimpleOperationBandConf bandConf1(centralFrequencyBand1, bandwidthBand1, numCcPerBand, BandwidthPartInfo::UMa);  // 创建简单操作频带配置
 
     OperationBandInfo band1 = ccBwpCreator.CreateOperationBandContiguousCc(bandConf1);  // 创建连续CC操作频带
 
@@ -432,8 +435,12 @@ int main(int argc, char* argv[]) {
         ueStaticRouting->SetDefaultRoute(epcHelper->GetUeDefaultGatewayAddress(), 1);
     }
 
-
-    nrHelper->AttachToClosestEnb(ueLowLatNetDev, enbNetDev);  // 将用户设备连接到最近的基站
+    // nrHelper->AttachToClosestEnb(ueLowLatNetDev, enbNetDev);  // 将用户设备连接到最近的基站
+    for (int i = 0; i < gNbNum; i++) {
+        for (int j = 0; j < ueNumPergNb; j++) {
+            nrHelper->AttachToEnb(ueLowLatNetDev.Get(i*ueNumPergNb+j), enbNetDev.Get(i));
+        }
+    }
 
     NS_LOG_UNCOND("  p2p an IP set success " << Simulator::Now().GetSeconds() << "\n");
 
@@ -451,15 +458,15 @@ int main(int argc, char* argv[]) {
 
     // ApplicationContainer serverApps;  // 创建服务器应用容器
     UdpServerHelper dlPacketSinkLowLat(dlPortLowLat);  // 创建UDP服务器助手，用于低延迟业务
-    std::vector<ns3::Ptr<ns3::UdpServer>> serverApps(ueNum);
+    std::vector<ns3::Ptr<ns3::UdpServer>> serverApps(gNbNum*ueNumPergNb);
 
 
 
-    UdpClientHelper dlClientLowLat[ueNum];  // 创建UDP客户端助手
-    std::vector<ns3::Ptr<ns3::UdpClient>> clientApps(ueNum);  // 创建客户端应用容器
-    ApplicationContainer clientAppsContainer[ueNum];  // 创建客户端应用容器
+    UdpClientHelper dlClientLowLat[gNbNum*ueNumPergNb];  // 创建UDP客户端助手
+    std::vector<ns3::Ptr<ns3::UdpClient>> clientApps(gNbNum*ueNumPergNb);  // 创建客户端应用容器
+    ApplicationContainer clientAppsContainer[gNbNum*ueNumPergNb];  // 创建客户端应用容器
 
-    for (uint32_t j = 0; j < ueNum; ++j)
+    for (uint32_t j = 0; j < gNbNum*ueNumPergNb; ++j)
     {
         dlClientLowLat[j].SetAttribute("RemotePort", UintegerValue(dlPortLowLat));  // 设置远程端口
         dlClientLowLat[j].SetAttribute("MaxPackets", UintegerValue(0xFFFFFFFF));  // 设置最大包数
@@ -492,7 +499,7 @@ int main(int argc, char* argv[]) {
         serverApps,        // std::vector<ns3::Ptr<ns3::UdpServer>>
         adjustInteval,     // Time adjustInteval
         adjustDelay,       // Time adjustDelay
-        ueNum, // uint16_t ueAmount
+        (uint16_t)gNbNum*ueNumPergNb, // uint16_t ueAmount
         windows_size
     };
 
