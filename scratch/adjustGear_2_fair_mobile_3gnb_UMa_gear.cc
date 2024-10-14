@@ -4,7 +4,7 @@ NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/ad
 
 
 /*
-NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2_fair_mobile_3gnb_UMa_gear > scratch/log.adjustGear_mobile_3gnb10_2.server.out --command-template="%s  --gNbNum=3 --ueNumPergNb=25 --adjustInteval=0.001 --adjustDelay=0.1 --randomStream=1 --windows_size=1" 2>&1
+NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2_fair_mobile_3gnb_UMa_gear > scratch/log.adjustGear_mobile_3gnb10_3.server.out --command-template="%s  --randomUe=3 --gNbNum=3 --ueNumPergNb=6 --adjustInteval=0.001 --adjustDelay=0.1 --randomStream=1 --windows_size=1" 2>&1
 */
 // 9-9
 
@@ -115,7 +115,7 @@ bool IsAvaiableGear(double bandWidth, int newGear) {
 void changeGear(int ueNum, std::vector<ns3::Ptr<ns3::UdpClient>>& clientApps, uint32_t newGear) {
     ueGearList[ueNum] = newGear;
     uint32_t new_size = gearTable.PacketSizeRequirement[newGear];
-    // NS_LOG_UNCOND("  time " << Simulator::Now().GetSeconds() << " ue " << ueNum << " change Size to " << new_size);
+    NS_LOG_UNCOND("  time " << Simulator::Now().GetSeconds() << " ue " << ueNum << " change Size to " << new_size);
     clientApps[ueNum]->changeGear(newGear, new_size);
 }
 
@@ -199,7 +199,7 @@ void adjustGear(AdjustGearParams& params
                             if (ue != ueNum) {
                                 if (ueGearList[ue] < l_gear) {
                                     params.clientApps[ue]->lock();
-                                    NS_LOG_UNCOND("  ue " << ue << "change gear to " << l_gear );
+                                    // NS_LOG_UNCOND("  ue " << ue << "change gear to " << l_gear );
                                     Simulator::Schedule(params.adjustDelay, &changeGear, ue, params.clientApps, l_gear);
                                     flag = 1;
                                 }
@@ -209,7 +209,7 @@ void adjustGear(AdjustGearParams& params
                     }
                 }
                 else {
-                    // NS_LOG_UNCOND("  time " << Simulator::Now().GetSeconds() << " ue " << ueNum << " will rise gear to " << newGear << " at " << Simulator::Now().GetMilliSeconds() + adjustDelay.GetMilliSeconds() << "ms");
+                    NS_LOG_UNCOND("  time " << Simulator::Now().GetSeconds() << " ue " << ueNum << " will rise gear to " << newGear << " at " << Simulator::Now().GetMilliSeconds() + params.adjustDelay.GetMilliSeconds() << "ms");
                     params.clientApps[ueNum]->lock();
                     Simulator::Schedule(params.adjustDelay, &changeGear, ueNum, params.clientApps, newGear);
                 }
@@ -244,6 +244,7 @@ int main(int argc, char* argv[]) {
 
     int windows_size = 2;
     int64_t randomStream = 1;  // 随机数流的初始值
+    int64_t randomUe = 1;
     uint16_t gNbNum = 1;          // gNb的数量
     uint16_t ueNumPergNb = 3;         // 用户设备数量
     Time adjustInteval = MilliSeconds(10); //调档间隔
@@ -286,6 +287,7 @@ int main(int argc, char* argv[]) {
     cmd.AddValue("adjustDelay", "adjustDelay", adjustDelay);
     cmd.AddValue("randomStream", "randomStream", randomStream);
     cmd.AddValue("windows_size", "windows_size", windows_size);
+    cmd.AddValue("randomUe", "randomUe", randomUe);
     
     cmd.Parse(argc, argv);
 
@@ -318,40 +320,96 @@ int main(int argc, char* argv[]) {
     gNbNodes.Create(3);
     ueNodes.Create(gNbNum*ueNumPergNb);
 
-    double gnbX = 200.0;
-
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
-    gnbPositionAlloc->Add(Vector(gnbX, 0.0, 25));
-    gnbPositionAlloc->Add(Vector(gnbX+200, 0.0, 25));
-    gnbPositionAlloc->Add(Vector(gnbX-200, 0.0, 25));
+    gnbPositionAlloc->Add(Vector(-200, 0.0, 25));
+    gnbPositionAlloc->Add(Vector(0.0, 0.0, 25));
+    gnbPositionAlloc->Add(Vector(200, 0.0, 25));
+
     
     mobility.SetPositionAllocator(gnbPositionAlloc);
     mobility.Install(gNbNodes);
 
-    mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
-                            "Bounds",
-                            RectangleValue(Rectangle(-500, 500, -500, 500)),
-                            "Speed",
-                            StringValue("ns3::ConstantRandomVariable[Constant=0.83]")
-                            );
+    double min = 0.0;
+    double max = 0.0;
+    RngSeedManager::SetSeed(randomUe);
+    Ptr<ListPositionAllocator> uePositionAlloc = CreateObject<ListPositionAllocator>();
+    Ptr<UniformRandomVariable> randomPosX1 = CreateObject<UniformRandomVariable> ();
+        Ptr<UniformRandomVariable> randomPosX2 = CreateObject<UniformRandomVariable> ();
+            Ptr<UniformRandomVariable> randomPosX3 = CreateObject<UniformRandomVariable> ();
+    Ptr<UniformRandomVariable> randomPosY = CreateObject<UniformRandomVariable> ();
 
-    double min = -500.0;
-    double max = 500.0;
-    Ptr<UniformRandomVariable> randomPos = CreateObject<UniformRandomVariable> ();
-    randomPos->SetAttribute ("Min", DoubleValue (min));
-    randomPos->SetAttribute ("Max", DoubleValue (max));
-    for (int i = 0; i < gNbNum*ueNumPergNb; i++) {
-        Ptr<ListPositionAllocator> uePositionAlloc = CreateObject<ListPositionAllocator>();
-        double x = randomPos->GetValue();
-        double y = randomPos->GetValue();
-        uePositionAlloc->Add(Vector(x, y, 1.5));
-        NS_LOG_UNCOND(" x " << x << " y " << y << "\n");
+    min = -400;
+    max = 0.0;
+    randomPosX1->SetAttribute ("Min", DoubleValue (min));
+    randomPosX1->SetAttribute ("Max", DoubleValue (max));
+    min = -200;
+    max = 200;
+    randomPosX2->SetAttribute ("Min", DoubleValue (min));
+    randomPosX2->SetAttribute ("Max", DoubleValue (max));
+    min = 0;
+    max = 400;
+    randomPosX3->SetAttribute ("Min", DoubleValue (min));
+    randomPosX3->SetAttribute ("Max", DoubleValue (max));
 
-        mobility.SetPositionAllocator(uePositionAlloc);
-        mobility.Install(ueNodes.Get(i));
-        randomStream += mobility.AssignStreams(ueNodes.Get(i), randomStream);
+    randomPosY->SetAttribute ("Min", DoubleValue (-200));
+    randomPosY->SetAttribute ("Max", DoubleValue (200));
+
+    for (int g = 0; g < gNbNum; g++) {
+        if (g == 0) {
+            mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
+                "Bounds",
+                RectangleValue(Rectangle(-400, 0, -200, 200)),
+                "Speed",
+                StringValue("ns3::ConstantRandomVariable[Constant=0.83]")
+            );
+
+        }
+        else if (g == 1) {
+            mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
+                "Bounds",
+                RectangleValue(Rectangle(-200, 200, -200, 200)),
+                "Speed",
+                StringValue("ns3::ConstantRandomVariable[Constant=0.83]")
+            );
+
+        }
+        else if (g == 2) {
+            mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
+                "Bounds",
+                RectangleValue(Rectangle(0, 400, -200, 200)),
+                "Speed",
+                StringValue("ns3::ConstantRandomVariable[Constant=0.83]")
+            );
+
+        }
+
+
+
+        for (int i = 0; i < ueNumPergNb; i++) {
+            double x = 0.0;
+            if (g == 0) {
+                x = randomPosX1->GetValue();
+            }
+            else if (g == 1) {
+                x = randomPosX2->GetValue();
+            }
+            else if (g == 2) {
+                x = randomPosX3->GetValue();
+            }
+
+            double y = randomPosY->GetValue();
+
+            uePositionAlloc->Add(Vector(x, y, 1.5));
+            NS_LOG_UNCOND(" x " << x << " y " << y << "\n");
+
+            mobility.SetPositionAllocator(uePositionAlloc);
+            mobility.Install(ueNodes.Get(g*ueNumPergNb+i));
+            randomStream += mobility.AssignStreams(ueNodes.Get(g*ueNumPergNb+i), randomStream);
+        }
     }
+
+
 
 
     NS_LOG_UNCOND("  " << Simulator::Now().GetSeconds() << "  Scenario create success " << "\n");
@@ -460,9 +518,15 @@ int main(int argc, char* argv[]) {
     }
 
     // nrHelper->AttachToClosestEnb(ueLowLatNetDev, enbNetDev);  // 将用户设备连接到最近的基站
-    for (int i = 0; i < gNbNum; i++) {
-        for (int j = 0; j < ueNumPergNb; j++) {
-            nrHelper->AttachToEnb(ueLowLatNetDev.Get(i*ueNumPergNb+j), enbNetDev.Get(i));
+    for (int i = 0; i < gNbNum*ueNumPergNb; i++) {
+        if (i < ueNumPergNb) {
+            nrHelper->AttachToEnb(ueLowLatNetDev.Get(i), enbNetDev.Get(0));
+        }
+        if (i >= ueNumPergNb && i < 2*ueNumPergNb) {
+            nrHelper->AttachToEnb(ueLowLatNetDev.Get(i), enbNetDev.Get(1));
+        }
+        if (i >= 2*ueNumPergNb && i < 3*ueNumPergNb) {
+            nrHelper->AttachToEnb(ueLowLatNetDev.Get(i), enbNetDev.Get(2));
         }
     }
 

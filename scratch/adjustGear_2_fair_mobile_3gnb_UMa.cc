@@ -294,13 +294,12 @@ int main(int argc, char* argv[]) {
     gNbNodes.Create(3);
     ueNodes.Create(gNbNum*ueNumPergNb);
 
-    double gnbX = 200.0;
 
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
-    gnbPositionAlloc->Add(Vector(gnbX, 0.0, 25));
-    gnbPositionAlloc->Add(Vector(gnbX+200, 0.0, 25));
-    gnbPositionAlloc->Add(Vector(gnbX-200, 0.0, 25));
+    gnbPositionAlloc->Add(Vector(0.0, 0.0, 25));
+    gnbPositionAlloc->Add(Vector(200, 0.0, 25));
+    gnbPositionAlloc->Add(Vector(-200, 0.0, 25));
     
     mobility.SetPositionAllocator(gnbPositionAlloc);
     mobility.Install(gNbNodes);
