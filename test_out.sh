@@ -3,12 +3,12 @@ trap 'kill $(jobs -p)' EXIT
 
 # 参数列表
 gNbNum=1
-ueNumList=(22 24 26 28 30 32)
+ueNumPergNbList=(22 24 26 28 30 32)
 # adjustIntevalList=(0.001 0.01 0.05)
 # adjustIntevalList=(0.001)
 adjustInteval=0.001
 adjustDelayList=(0.01 0.05 0.1)
-randomStreamList=({1..15})
+randomStreamList=({1..6})
 windowSizeList=(1)
 
 
@@ -22,9 +22,9 @@ limit_jobs() {
 # 创建输出目录
 for randomStream in "${randomStreamList[@]}"; do
     for windows_size in "${windowSizeList[@]}"; do
-            mkdir -p "test-out/Gnb${gNbNum}-Adjust-random1-15/wds-${windows_size}/random-${randomStream}"
+            mkdir -p "test-out/Gnb${gNbNum}-Adjust-mobile-random1-6/wds-${windows_size}/random-${randomStream}"
 
-            for ueNum in "${ueNumList[@]}"; do
+            for ueNumPergNb in "${ueNumPergNbList[@]}"; do
                 # for adjustInteval in "${adjustIntevalList[@]}"; do
                     for adjustDelay in "${adjustDelayList[@]}"; do
 
@@ -33,15 +33,15 @@ for randomStream in "${randomStreamList[@]}"; do
                         adjustDelay_ms=$(echo "$adjustDelay * 1000" | bc)
 
                         # 生成输出文件名，单位为ms
-                        outputFile="test-out/Gnb${gNbNum}-Adjust-random1-15/wds-${windows_size}/random-${randomStream}/test.server-${gNbNum}-${ueNum}-${adjustInteval_ms}-${adjustDelay_ms}.out"
+                        outputFile="test-out/Gnb${gNbNum}-Adjust-mobile-random1-6/wds-${windows_size}/random-${randomStream}/test.server-${gNbNum}-${ueNumPergNb}-${adjustInteval_ms}-${adjustDelay_ms}.out"
 
                         # 限制并行运行的后台进程数量
                         limit_jobs
 
                         # 执行ns3命令并在后台运行
-                        NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2_fair_mobility --command-template="%s --gNbNum=${gNbNum} --ueNum=${ueNum} --adjustInteval=${adjustInteval} --adjustDelay=${adjustDelay} --randomStream=${randomStream} --windows_size=${windows_size}" > "$outputFile" 2>&1 &
+                        NS_LOG="UdpServer=info|prefix_time|prefix_node|prefix_func" ./ns3 run scratch/adjustGear_2_fair_mobile_1gnb_UMa --command-template="%s --gNbNum=${gNbNum} --ueNumPergNb=${ueNumPergNb} --adjustInteval=${adjustInteval} --adjustDelay=${adjustDelay} --randomStream=${randomStream} --windows_size=${windows_size}" > "$outputFile" 2>&1 &
 
-                        echo "Executed with gNbNum=${gNbNum}, ueNum=${ueNum}, adjustInteval=${adjustInteval_ms}ms, adjustDelay=${adjustDelay_ms}ms, output=${outputFile}, randomStream=${randomStream}, windows_size=${windows_size},"
+                        echo "Executed with gNbNum=${gNbNum}, ueNumPergNb=${ueNumPergNb}, adjustInteval=${adjustInteval_ms}ms, adjustDelay=${adjustDelay_ms}ms, output=${outputFile}, randomStream=${randomStream}, windows_size=${windows_size},"
 
                         
                     done

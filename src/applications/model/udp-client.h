@@ -78,6 +78,7 @@ class UdpClient : public Application
     void changeGear(uint32_t new_gear, uint32_t new_size);
     void lock();
     bool is_lock();
+    Time GetLastGearChangeTime();
 
     /**
      * \brief Send a packet
@@ -116,6 +117,7 @@ class UdpClient : public Application
 
     uint32_t gearLock;
     uint32_t m_gear;
+    Time lastGearChangeTime;
 
 #ifdef NS3_LOG_ENABLE
     std::string m_peerAddressString; //!< Remote peer address string

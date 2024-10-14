@@ -99,6 +99,7 @@ UdpClient::UdpClient()
 
     gearLock = 0;
     m_gear = 0;
+    lastGearChangeTime = Simulator::Now();
 }
 
 UdpClient::~UdpClient()
@@ -222,6 +223,12 @@ UdpClient::StopThisApplication()
     Simulator::Cancel(m_sendEvent);
 }
 
+Time
+UdpClient::GetLastGearChangeTime()
+{
+    return lastGearChangeTime;
+}
+
 void
 UdpClient::changeGear(uint32_t new_gear, uint32_t new_size)
 {
@@ -229,6 +236,8 @@ UdpClient::changeGear(uint32_t new_gear, uint32_t new_size)
     m_gear = new_gear;
     m_size = new_size;
     gearLock = 0;
+
+    lastGearChangeTime = Simulator::Now();
 
     // NS_LOG_UNCOND("new m_size  " << m_size );
 }
